@@ -7,12 +7,57 @@ services:
     ports:
       - "${GATEWAY_BIND:-127.0.0.1}:8080:8080"
     restart: unless-stopped
+  erp-auth:
+    image: ${AUTH_IMAGE:-erp-auth:unreleased}
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: ${AUTH_DB_URL:?Set AUTH_DB_URL}
+      SPRING_DATASOURCE_USERNAME: auth_app
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD}
+    restart: unless-stopped
   erp-item:
-    image: ${ITEM_IMAGE:?Set ITEM_IMAGE}
+    image: ${ITEM_IMAGE:-erp-item:unreleased}
     ports:
       - "127.0.0.1:8082:8082"
     environment:
       SPRING_DATASOURCE_URL: ${ITEM_DB_URL:?Set ITEM_DB_URL}
       SPRING_DATASOURCE_USERNAME: item_app
       SPRING_DATASOURCE_PASSWORD: ${ITEM_DB_PASSWORD:?Set ITEM_DB_PASSWORD}
+    restart: unless-stopped
+  erp-inventory:
+    image: ${INVENTORY_IMAGE:-erp-inventory:unreleased}
+    ports:
+      - "127.0.0.1:8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: ${INVENTORY_DB_URL:?Set INVENTORY_DB_URL}
+      SPRING_DATASOURCE_USERNAME: inventory_app
+      SPRING_DATASOURCE_PASSWORD: ${INVENTORY_DB_PASSWORD:?Set INVENTORY_DB_PASSWORD}
+    restart: unless-stopped
+  erp-procurement:
+    image: ${PROCUREMENT_IMAGE:-erp-procurement:unreleased}
+    ports:
+      - "127.0.0.1:8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: ${PROCUREMENT_DB_URL:?Set PROCUREMENT_DB_URL}
+      SPRING_DATASOURCE_USERNAME: procurement_app
+      SPRING_DATASOURCE_PASSWORD: ${PROCUREMENT_DB_PASSWORD:?Set PROCUREMENT_DB_PASSWORD}
+    restart: unless-stopped
+  erp-sales:
+    image: ${SALES_IMAGE:-erp-sales:unreleased}
+    ports:
+      - "127.0.0.1:8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: ${SALES_DB_URL:?Set SALES_DB_URL}
+      SPRING_DATASOURCE_USERNAME: sales_app
+      SPRING_DATASOURCE_PASSWORD: ${SALES_DB_PASSWORD:?Set SALES_DB_PASSWORD}
+    restart: unless-stopped
+  erp-notification:
+    image: ${NOTIFICATION_IMAGE:-erp-notification:unreleased}
+    ports:
+      - "127.0.0.1:8086:8086"
+    environment:
+      SPRING_DATASOURCE_URL: ${NOTIFICATION_DB_URL:?Set NOTIFICATION_DB_URL}
+      SPRING_DATASOURCE_USERNAME: noti_app
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Set NOTIFICATION_DB_PASSWORD}
     restart: unless-stopped
