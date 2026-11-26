@@ -1,0 +1,18 @@
+name: erp-dev
+services:
+  gateway:
+    image: ${GATEWAY_IMAGE:?Set GATEWAY_IMAGE}
+    environment:
+      ITEM_SERVICE_URL: http://erp-item:8082
+    ports:
+      - "${GATEWAY_BIND:-127.0.0.1}:8080:8080"
+    restart: unless-stopped
+  erp-item:
+    image: ${ITEM_IMAGE:?Set ITEM_IMAGE}
+    ports:
+      - "127.0.0.1:8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: ${ITEM_DB_URL:?Set ITEM_DB_URL}
+      SPRING_DATASOURCE_USERNAME: item_app
+      SPRING_DATASOURCE_PASSWORD: ${ITEM_DB_PASSWORD:?Set ITEM_DB_PASSWORD}
+    restart: unless-stopped

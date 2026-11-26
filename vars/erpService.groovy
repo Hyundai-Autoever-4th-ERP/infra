@@ -17,6 +17,20 @@ def call(String service) {
                     }
                 }
             }
+            stage('Deploy Item to development') {
+                when {
+                    beforeAgent true
+                    allOf {
+                        branch 'main'
+                        expression { service == 'erp-item' && env.DEV_INSTANCE_ID?.trim() }
+                    }
+                }
+                agent { label 'erp-ci-db' }
+                options { timeout(time: 20, unit: 'MINUTES') }
+                steps {
+                    sh(script: libraryResource('erp/deploy-dev-item.sh'))
+                }
+            }
             stage('Publish and deploy') {
                 when {
                     beforeAgent true
