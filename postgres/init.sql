@@ -1,0 +1,23 @@
+CREATE ROLE auth_app LOGIN PASSWORD 'auth_local';
+CREATE DATABASE auth_db OWNER auth_app;
+REVOKE CONNECT ON DATABASE auth_db FROM PUBLIC;
+
+CREATE ROLE item_app LOGIN PASSWORD 'item_local';
+CREATE DATABASE item_db OWNER item_app;
+REVOKE CONNECT ON DATABASE item_db FROM PUBLIC;
+
+CREATE ROLE inventory_app LOGIN PASSWORD 'inventory_local';
+CREATE DATABASE inventory_db OWNER inventory_app;
+REVOKE CONNECT ON DATABASE inventory_db FROM PUBLIC;
+
+CREATE ROLE procurement_app LOGIN PASSWORD 'procurement_local';
+CREATE DATABASE procurement_db OWNER procurement_app;
+REVOKE CONNECT ON DATABASE procurement_db FROM PUBLIC;
+
+CREATE ROLE sales_app LOGIN PASSWORD 'sales_local';
+CREATE DATABASE sales_db OWNER sales_app;
+REVOKE CONNECT ON DATABASE sales_db FROM PUBLIC;
+
+CREATE ROLE noti_app LOGIN PASSWORD 'noti_local';
+CREATE DATABASE noti_db OWNER noti_app;
+REVOKE CONNECT ON DATABASE noti_db FROM PUBLIC;
