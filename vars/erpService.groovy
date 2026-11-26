@@ -9,10 +9,12 @@ def call(String service) {
         }
         stages {
             stage('Test and build') {
-                agent { label 'erp-java25' }
+                agent { label 'erp-ci-db' }
                 options { timeout(time: 20, unit: 'MINUTES') }
                 steps {
-                    sh './gradlew --no-daemon clean build'
+                    withEnv(["ERP_SERVICE=${service}"]) {
+                        sh(script: libraryResource('erp/db-build.sh'))
+                    }
                 }
             }
             stage('Publish and deploy') {

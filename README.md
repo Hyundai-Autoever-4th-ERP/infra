@@ -65,7 +65,7 @@ Jenkins 환경에 `AWS_REGION`, `ECR_REPOSITORY_URI`(태그 제외), `KUBE_CONTE
 
 각 `erp-*` 저장소의 Jenkinsfile은 이 저장소의 공통 Pipeline(`vars/erpService.groovy`)을 호출한다.
 
-1. Jenkins에서 **Pipeline: Groovy Libraries**를 설치하고 도메인 작업용 폴더의 **Pipeline Libraries**에 `erp-ci`를 등록한다. Modern SCM → Git으로 이 비공개 `infra` 저장소와 읽기 자격 증명을 지정한다. 기본 버전은 `main`이며 버전 덮어쓰기는 끈다.
-2. 도메인마다 그 폴더에 **Multibranch Pipeline**을 만들고 해당 GitHub 저장소를 연결한다. `main`, `develop`, 같은 저장소의 PR을 검색한다. GitHub App에 코드·PR 읽기 및 빌드 상태 기록 권한을 주고, GitHub webhook 또는 주기적 스캔을 연결한다.
-3. CI는 JDK 25와 Git이 있는 `erp-java25` 에이전트에서 루트의 `./gradlew clean build`를 실행한다. 팀원이 첫 서비스 코드와 실행 가능한 Gradle Wrapper를 올리면 동작한다. Jenkinsfile만 있는 빈 서비스는 빌드에 실패한다.
+1. 읽기 전용 GitHub App으로 `infra`와 도메인 저장소 6개에 접근한다. 공통 라이브러리 `erp-ci`는 `infra/main`을 사용한다.
+2. 각 저장소의 Multibranch Pipeline은 `main`과 `develop`을 5분 간격으로 확인한다. 에이전트 1개가 빌드를 순차 처리한다.
+3. 매 빌드는 전용 PostgreSQL 17에 서비스 계정으로 접속한다. 서비스에 Gradle Wrapper가 있으면 JDK 25 컨테이너에서 테스트와 빌드도 실행한다. 초기 저장소는 DB 연결까지만 검증한다.
 4. 배포할 서비스는 루트에 독립 빌드 가능한 Dockerfile을 둔다. `ECR_REPOSITORY_URI`는 작업별로 해당 서비스의 ECR 주소를 지정한다. Kubernetes Deployment와 컨테이너 이름은 저장소 이름(예: `erp-item`)을 쓴다. 승인된 `main` 빌드에서 `DEPLOY`를 선택하면 위와 같은 방식으로 이미지를 배포한다. 배포 자격 증명은 보호된 main 작업에서만 쓸 수 있도록 Jenkins에서 접근을 제한하고 PR 빌드는 배포 에이전트에서 실행하지 않는다.
