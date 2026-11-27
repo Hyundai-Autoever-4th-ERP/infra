@@ -3,7 +3,16 @@ services:
   gateway:
     image: ${GATEWAY_IMAGE:?Set GATEWAY_IMAGE}
     environment:
+      AUTH_SERVICE_URL: http://erp-auth:8081
       ITEM_SERVICE_URL: http://erp-item:8082
+      INVENTORY_SERVICE_URL: http://erp-inventory:8083
+      PROCUREMENT_SERVICE_URL: http://erp-procurement:8084
+      SALES_SERVICE_URL: http://erp-sales:8085
+      NOTIFICATION_SERVICE_URL: http://erp-notification:8086
+      ERP_FRONTEND_ORIGINS: ${ERP_FRONTEND_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/config/application.yml
+    volumes:
+      - ./api-gateway/src/main/resources/application.yml:/app/config/application.yml:ro
     ports:
       - "${GATEWAY_BIND:-127.0.0.1}:8080:8080"
     restart: unless-stopped
