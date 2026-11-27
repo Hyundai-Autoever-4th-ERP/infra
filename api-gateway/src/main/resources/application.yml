@@ -7,8 +7,77 @@ spring:
     gateway:
       server:
         webflux:
+          globalcors:
+            cors-configurations:
+              '[/api/**]':
+                allowed-origins: ${ERP_FRONTEND_ORIGINS:http://localhost:5173,http://localhost:3000}
+                allowed-methods: [GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS]
+                allowed-headers: [Authorization, Content-Type, Accept]
+                allow-credentials: true
           routes:
+            - id: auth
+              uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**,/api/users/**
+            - id: auth-health
+              uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/health/auth
+                - Method=GET,HEAD
+              filters:
+                - SetPath=/actuator/health
             - id: item
               uri: ${ITEM_SERVICE_URL:http://localhost:8082}
               predicates:
                 - Path=/api/v1/items/**,/api/v1/locations/**
+            - id: item-health
+              uri: ${ITEM_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/health/item
+                - Method=GET,HEAD
+              filters:
+                - SetPath=/actuator/health
+            - id: inventory
+              uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/inventory/**
+            - id: inventory-health
+              uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/health/inventory
+                - Method=GET,HEAD
+              filters:
+                - SetPath=/actuator/health
+            - id: procurement
+              uri: ${PROCUREMENT_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/vendors/**,/api/v1/purchase-orders/**
+            - id: procurement-health
+              uri: ${PROCUREMENT_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/health/procurement
+                - Method=GET,HEAD
+              filters:
+                - SetPath=/actuator/health
+            - id: sales
+              uri: ${SALES_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/v1/sales-orders/**
+            - id: sales-health
+              uri: ${SALES_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/health/sales
+                - Method=GET,HEAD
+              filters:
+                - SetPath=/actuator/health
+            - id: notification
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8086}
+              predicates:
+                - Path=/api/v1/notifications/**
+            - id: notification-health
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8086}
+              predicates:
+                - Path=/health/notification
+                - Method=GET,HEAD
+              filters:
+                - SetPath=/actuator/health

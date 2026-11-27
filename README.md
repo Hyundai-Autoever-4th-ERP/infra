@@ -39,7 +39,11 @@ docker compose up -d --build gateway
 | `erp-sales` | 8085 | `sales_db` |
 | `erp-notification` | 8086 | `noti_db` |
 
-Gateway는 8080을 사용합니다. 새 API 경로는 위의 ‘새 API 연결’을 따라 등록하세요.
+개발 API 기본 주소는 `https://3.35.239.80`입니다. Nginx는 HTTPS 요청을 호스트 내부의 Gateway(8080)로 전달합니다. 서비스 상태는 `GET /health/{domain}`에서 확인합니다. 도메인 값은 `auth`, `item`, `inventory`, `procurement`, `sales`, `notification`입니다.
+
+브라우저 개발용 CORS 기본 출처는 `http://localhost:5173`과 `http://localhost:3000`입니다. 배포 프론트 주소가 정해지면 개발 서버의 `ERP_FRONTEND_ORIGINS`에 허용할 출처를 쉼표로 구분해 지정하세요.
+
+개발 서버에는 `compose.dev.yaml`과 같은 디렉터리 아래에 `api-gateway/src/main/resources/application.yml`을 배치합니다. Gateway가 이 파일을 읽으므로 경로를 수정한 후에는 Gateway 컨테이너를 다시 생성하세요. 개발 EC2의 Nginx와 인증서 자동 갱신은 [설정 스크립트](deploy/setup-dev-https.sh)로 구성합니다. 80번 포트는 인증서 검증과 HTTPS 리디렉션에, 443번 포트는 API에 사용합니다. 서버를 오래 중지한 뒤에는 부팅 후 인증서 갱신이 끝나면 HTTPS를 사용할 수 있습니다.
 
 서버의 `/opt/erp`에 [Compose 파일](compose.dev.yaml)과 [배포 스크립트](deploy/deploy-service.sh)를 둡니다. `.env`에는 Gateway 이미지와 서비스별 DB 주소·비밀번호를, `registry.env`에는 `AWS_REGION`과 `DEV_ECR_REGISTRY`를 설정합니다. 배포 스크립트가 `deployed.env`에 서비스별 성공 이미지 버전을 기록합니다.
 
