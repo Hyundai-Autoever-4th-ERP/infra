@@ -1,50 +1,29 @@
-# ERP 로컬 인프라
+# 현대파츠 ERP 인프라
 
-담당 서비스 하나만 개발할 때는 해당 저장소의 README를 따라가세요. 프론트와 백엔드를 Gateway로 연결할 때 이 저장소를 사용합니다.
+자동차 부품 ERP의 API Gateway, 개발 서버 구성과 Jenkins 공통 파이프라인을 관리한다. 여섯 도메인은 각각의 저장소에서 개발하고, 개발 서버에서는 동일한 HTTPS 주소를 통해 API를 제공하도록 구성했다.
 
-## Gateway 실행
+## 개발 환경 아키텍처
 
-같은 PC에서 담당 서비스를 먼저 실행한 뒤, 이 저장소에서 Gateway를 켜세요.
-
-```sh
-docker compose up -d --build gateway
+```mermaid
+flowchart LR
+    Client["프론트엔드"] -->|HTTPS| Nginx
+    subgraph EC2["개발 EC2 · erp-dev"]
+        Nginx["NGINX"] --> Gateway["Spring Cloud Gateway"]
+        Gateway -->|API 경로별 라우팅| Services["도메인 컨테이너 6개<br/>인증 · 부품 · 재고 · 구매 · 판매 · 알림"]
+    end
+    Services -->|서비스별 DB 계정| DB[("Amazon RDS for PostgreSQL<br/>인스턴스 1개 · 데이터베이스 6개")]
 ```
 
-[Gateway 상태 확인](http://localhost:8080/actuator/health)에서 `UP`을 확인하세요. 종료할 때는 `docker compose down`을 사용합니다.
+예를 들어 부품 목록 요청인 `GET /api/v1/items`는 NGINX에서 HTTPS 연결을 처리한 뒤 Gateway로 전달된다. Gateway는 요청 경로에 따라 `erp-item:8082`로 전달하며, 브라우저의 교차 출처 요청(CORS)도 여기서 관리한다. 개발 환경에서는 서비스마다 컨테이너와 데이터베이스를 분리하고, EC2와 RDS 인스턴스는 공유한다. [Gateway 라우팅](api-gateway/src/main/resources/application.yml) · [개발 서버 Compose](compose.dev.yaml)
 
-## 새 API 연결
+## 빌드와 배포
 
-1. 도메인 담당자가 서비스 포트와 API 경로, 확인할 요청 한 개를 인프라 담당자에게 공유합니다.
-2. 인프라 담당자가 [Gateway 라우트](api-gateway/src/main/resources/application.yml)와 [Compose의 서비스 주소](compose.yaml)를 등록합니다. PC에서 실행한 서비스 주소는 `http://host.docker.internal:<서비스 포트>`입니다.
-3. Gateway를 다시 빌드하고 같은 요청을 서비스 포트와 Gateway 포트(`8080`)에 각각 보내 응답을 확인합니다.
+- **도메인 CI** — Jenkins가 임시 PostgreSQL을 준비하고 해당 저장소의 Gradle 테스트와 빌드를 실행한다. 여섯 저장소가 같은 파이프라인을 사용한다. [공통 파이프라인](vars/erpService.groovy)
+- **개발 서버 CD** — `main` 빌드가 성공하고 배포 대상이 설정돼 있으면 이미지를 Amazon ECR에 올린다. Jenkins가 AWS Systems Manager로 배포를 요청하면 EC2는 해당 도메인 컨테이너만 교체한다. [배포 요청](resources/erp/deploy-dev.sh)
+- **배포 확인** — 새 컨테이너의 헬스체크가 `UP`이면 이미지 버전을 기록한다. 실패하면 직전 이미지가 있는 경우 해당 이미지로 복구를 시도한다. [배포 스크립트](deploy/deploy-service.sh)
 
-## 통합용 로컬 DB
+## 로컬 개발
 
-여러 서비스의 DB를 한 번에 준비할 때는 `docker compose up -d postgres`를 실행하세요. 접속 주소는 `localhost:5432`이며, 서비스별 DB와 계정은 [초기화 SQL](postgres/init.sql)에서 확인할 수 있습니다.
+로컬 Compose는 Gateway와 PostgreSQL을 제공한다. 담당 도메인 앱은 각 저장소에서 실행하고, 통합 요청은 로컬 Gateway(`localhost:8080`)로 보낸다. [로컬 Compose](compose.yaml)
 
-## Jenkins
-
-도메인 저장소의 `main`과 `develop` 변경은 [공통 파이프라인](vars/erpService.groovy)에서 임시 PostgreSQL을 띄워 테스트하고 빌드합니다. Gateway 자체의 빌드와 상태 확인은 [인프라 파이프라인](Jenkinsfile)에서 실행합니다.
-
-## 개발 서버 배포
-
-여섯 서비스는 개발 EC2 한 대(`erp-dev`)에서 별도 컨테이너로 실행합니다. 개발 배포를 켜면 각 저장소의 main 빌드가 테스트를 통과한 뒤 해당 컨테이너만 교체합니다. 상태 확인에 실패하면 그 서비스의 직전 이미지로 복구합니다.
-
-| 컨테이너 | 포트 | RDS 데이터베이스 |
-| --- | --- | --- |
-| `erp-auth` | 8081 | `auth_db` |
-| `erp-item` | 8082 | `item_db` |
-| `erp-inventory` | 8083 | `inventory_db` |
-| `erp-procurement` | 8084 | `procurement_db` |
-| `erp-sales` | 8085 | `sales_db` |
-| `erp-notification` | 8086 | `noti_db` |
-
-개발 API 기본 주소는 `https://3.35.239.80`입니다. Nginx는 HTTPS 요청을 호스트 내부의 Gateway(8080)로 전달합니다. 서비스 상태는 `GET /health/{domain}`에서 확인합니다. 도메인 값은 `auth`, `item`, `inventory`, `procurement`, `sales`, `notification`입니다.
-
-브라우저 개발용 CORS 기본 출처는 `http://localhost:5173`과 `http://localhost:3000`입니다. 배포 프론트 주소가 정해지면 개발 서버의 `ERP_FRONTEND_ORIGINS`에 허용할 출처를 쉼표로 구분해 지정하세요.
-
-개발 서버에는 `compose.dev.yaml`과 같은 디렉터리 아래에 `api-gateway/src/main/resources/application.yml`을 배치합니다. Gateway가 이 파일을 읽으므로 경로를 수정한 후에는 Gateway 컨테이너를 다시 생성하세요. 개발 EC2의 Nginx와 인증서 자동 갱신은 [설정 스크립트](deploy/setup-dev-https.sh)로 구성합니다. 80번 포트는 인증서 검증과 HTTPS 리디렉션에, 443번 포트는 API에 사용합니다. 서버를 오래 중지한 뒤에는 부팅 후 인증서 갱신이 끝나면 HTTPS를 사용할 수 있습니다.
-
-서버의 `/opt/erp`에 [Compose 파일](compose.dev.yaml)과 [배포 스크립트](deploy/deploy-service.sh)를 둡니다. `.env`에는 Gateway 이미지와 서비스별 DB 주소·비밀번호를, `registry.env`에는 `AWS_REGION`과 `DEV_ECR_REGISTRY`를 설정합니다. 배포 스크립트가 `deployed.env`에 서비스별 성공 이미지 버전을 기록합니다.
-
-Jenkins는 `DEV_INSTANCE_ID`가 설정된 동안 ECR에 이미지를 올리고 SSM 문서 `ERP-DeployServiceDev`로 배포합니다. 개발 EC2를 중단할 때는 이 값을 먼저 해제하세요. CI는 계속 실행됩니다.
+팀원별 실행 방법과 개발 서버 기동 순서는 [인프라 운영 가이드](https://app.notion.com/p/4246da9ae26a8155865dc26bada91738)에 정리했다.
