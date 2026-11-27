@@ -45,10 +45,18 @@ if [ ! -f gradlew ]; then
     exit 0
 fi
 git archive HEAD > "$tmp/source.tar"
-docker create --name "$builder" --network "$network" -w /workspace \
+# Only the two long-lived branches retain Gradle downloads across builds.
+set --
+case "${BRANCH_NAME:-}" in
+    main|develop)
+        set -- --mount "type=volume,source=gradle-${ERP_SERVICE}-${BRANCH_NAME},target=/gradle-cache" \
+            -e GRADLE_USER_HOME=/gradle-cache
+        ;;
+esac
+docker create "$@" --name "$builder" --network "$network" -w /workspace \
     -e SPRING_DATASOURCE_URL="jdbc:postgresql://db:5432/$database" \
     -e SPRING_DATASOURCE_USERNAME="$user" -e SPRING_DATASOURCE_PASSWORD="$password" \
-    eclipse-temurin:25-jdk ./gradlew --no-daemon clean build >/dev/null
+    eclipse-temurin:25-jdk ./gradlew --no-daemon --max-workers=1 clean build >/dev/null
 docker cp - "$builder:/workspace" < "$tmp/source.tar"
 docker start -a "$builder"
 test "$(docker inspect -f '{{.State.ExitCode}}' "$builder")" = 0
