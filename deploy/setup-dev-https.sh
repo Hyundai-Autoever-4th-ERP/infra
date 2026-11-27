@@ -46,7 +46,7 @@ After=network-online.target docker.service nginx.service
 Requires=docker.service nginx.service
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/erp-certbot renew --quiet
+ExecStart=/usr/local/sbin/erp-certbot renew --quiet --no-random-sleep-on-renew
 ExecStartPost=/usr/bin/systemctl reload nginx
 EOF
 cat >/etc/systemd/system/erp-cert-renew.timer <<'EOF'
